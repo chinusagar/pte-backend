@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PTE Read Aloud Test</title>
+</head>
+<body>
+    <h1>PTE Read Aloud Test</h1>
+    
+    <div id="question">
+        <h2>Read this text:</h2>
+        <p id="questionText">The quick brown fox jumps over the lazy dog.</p>
+    </div>
+    
+    <button id="startRecord">Start Recording</button>
+    <button id="stopRecord" disabled>Stop Recording</button>
+    
+    <div id="status"></div>
+    <div id="result"></div>
+    
+    <audio id="audioPlayback" controls style="display:none"></audio>
+    
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        
+        document.getElementById('startRecord').onclick = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audioPlayback = document.getElementById('audioPlayback');
+                    audioPlayback.src = audioUrl;
+                    audioPlayback.style.display = 'block';
+                    
+                    // Send to backend
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.webm');
+                    
+                    document.getElementById('status').innerHTML = 'Analyzing...';
+                    
+                    try {
+                        const response = await fetch('http://localhost:5000/ai/transcribe', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        document.getElementById('result').innerHTML = `
+                            <h3>Result:</h3>
+                            <p>Transcript: ${data.transcript || 'No transcript'}</p>
+                            <p>Success: ${data.success ? 'Yes' : 'No'}</p>
+                            ${data.error ? `<p>Error: ${data.error}</p>` : ''}
+                        `;
+                        document.getElementById('status').innerHTML = 'Done!';
+                    } catch (error) {
+                        document.getElementById('result').innerHTML = `Error: ${error.message}`;
+                        document.getElementById('status').innerHTML = 'Error!';
+                    }
+                };
+                
+                mediaRecorder.start();
+                document.getElementById('startRecord').disabled = true;
+                document.getElementById('stopRecord').disabled = false;
+                document.getElementById('status').innerHTML = 'Recording... Speak now!';
+                
+                // Auto stop after 10 seconds
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        document.getElementById('stopRecord').click();
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML = 'Microphone error: ' + error.message;
+            }
+        };
+        
+        document.getElementById('stopRecord').onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                document.getElementById('startRecord').disabled = false;
+                document.getElementById('stopRecord').disabled = true;
+                document.getElementById('status').innerHTML = 'Processing...';
+                
+                // Stop all tracks
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    </script>
+</body>
+</html>
