@@ -1,27 +1,59 @@
-const express = require("express");
-const cors = require("cors");
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 
-const app = express();
+app = FastAPI()
 
-app.use(cors());
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app.get("/questions/Speaking/Read Aloud", (req, res) => {
+@app.get("/")
+def home():
+    return {"message": "PTE Backend Running"}
 
-  res.json([
-    {
-      question:
-        "Climate change is affecting the world economy."
-    },
-    {
-      question:
-        "Technology has improved communication."
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+
+    return {
+        "analysis": {
+            "overall_score": 65,
+            "content": 4,
+            "fluency": 4,
+            "pronunciation": 3,
+            "feedback": "Good fluency. Improve pronunciation clarity."
+        },
+        "transcript": "Sample transcript generated"
+    }from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/")
+def home():
+    return {"message": "PTE Backend Running"}
+
+@app.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+
+    return {
+        "analysis": {
+            "overall_score": 65,
+            "content": 4,
+            "fluency": 4,
+            "pronunciation": 3,
+            "feedback": "Good fluency. Improve pronunciation clarity."
+        },
+        "transcript": "Sample transcript generated"
     }
-  ]);
-
-});
-
-app.listen(5000, () => {
-
-  console.log("Server running on port 5000");
-
-});
